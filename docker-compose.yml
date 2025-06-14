@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  ocr-worker:
+    build: .
+    volumes:
+      - ./input:/app/input
+      - ./output:/app/output
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - MODEL_NAME=gemini-2.5-flash-preview-05-20
+      - OUTPUT_DIR=/app/output
+      - PAGES_PER_SPLIT=3
+      - MAX_RETRIES=3
+      - RETRY_DELAY=10
+      - INPUT_PDF_PATH=/app/input/input.pdf
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os; assert os.path.exists('/app/input')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped 
