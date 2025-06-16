@@ -30,17 +30,17 @@ except ImportError:
     exit(1)
 
 # Supabase Configuration
-SUPABASE_URL = "https://hprvnejxmmxmegoocvsr.supabase.co"  # Replace with your Supabase URL
+SUPABASE_URL = "https://hprvnejxmmxmegoocvsr.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhwcnZuZWp4bW14bWVnb29jdnNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwNDc1MjUsImV4cCI6MjA2NTYyMzUyNX0.e6qyvvtx_HfkvR8Vt4QJswh8Oa4lZNYQxEyJI89bBE8"  # Replace with your Supabase anon key
-INPUT_BUCKET_NAME = "pdf-inputs"  # Bucket for input PDF files
-OUTPUT_BUCKET_NAME = "ocr-outputs"  # Bucket for OCR results
+INPUT_BUCKET_NAME = "pdf-inputs"
+OUTPUT_BUCKET_NAME = "ocr-outputs"
 
 # API Configuration
 API_KEYS = [
-    "AIzaSyDIoa0ekNCKEprdLyoFpntBI5dEmbqJN8U",  # Primary API
-    "AAGDF",  # Backup API 1
-    "AAFDF",  # Backup API 2
-    "AAGDFD"  # Backup API 3
+    "AIzaSyDIoa0ekNCKEprdLyoFpntBI5dEmbqJN8U",
+    "AAGDF",
+    "AAFDF",
+    "AAGDFD"
 ]
 
 MODEL_ID = "gemini-2.5-flash-preview-05-20"
