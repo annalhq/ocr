@@ -1,0 +1,31 @@
+services:
+  - type: worker
+    name: ocr-processing-worker
+    env: python 
+    plan: free
+
+    buildCommand: pip install -r requirements.txt
+    startCommand: python sb.py
+    repo: https://github.com/annalhq/ocr
+    branch: lw
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.10"
+      # - key: SUPABASE_URL
+      #   value: "https://hprvnejxmmxmegoocvsr.supabase.co" # From your script
+      # - key: SUPABASE_KEY # Sensitive value
+      #   fromSecret: true # Instructs Render to use a secret named SUPABASE_KEY stored in Render's secret management
+      # - key: INPUT_BUCKET_NAME
+      #   value: "pdf-inputs" # From your script
+      # - key: OUTPUT_BUCKET_NAME
+      #   value: "ocr-outputs" # From your script
+      # - key: GEMINI_API_KEYS_CSV # Comma-separated list of Gemini API Keys. Sensitive value.
+      #   fromSecret: true # Instructs Render to use a secret named GEMINI_API_KEYS_CSV. Your script needs to parse this.
+      # - key: MODEL_ID
+      #   value: "gemini-2.5-flash-preview-05-20" # From your script
+      # - key: MAX_RETRIES
+      #   value: "2" # From your script; your script should convert this to an int
+      # - key: RETRY_DELAY
+      #   value: "5" # From your script; your script should convert this to an int
+      # - key: DEFAULT_PAGES_PER_SPLIT
+      #   value: "1" 
