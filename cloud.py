@@ -49,13 +49,14 @@ RETRY_DELAY = 5
 DEFAULT_PAGES_PER_SPLIT = 1
 
 OCR_PROMPT = """
-Act as an expert OCR extractor, Extract All the data As it is word by word. Do not summaries or reduce the length of content, Your goal is to extract The texts as it is.
+Act as an expert OCR extractor, Extract All the data As it is word by word. Do not summaries or reduce the length of content, Your goal is to extract all the pages properly as it is.
 
 Information about the PDF:
 - Language: Hindi
 - Format: PDF with two tables on a single page, interleaved
 - Each table has 6 columns
 - each pdf has multiple pages
+
 At the start of each page, there is metadata about the people in the table. This metadata includes:
 - District name
 - Polling center
@@ -63,6 +64,7 @@ At the start of each page, there is metadata about the people in the table. This
 - Ward number
 - Body number
 - Locality name
+
 Output only the Export the extracted data in the following CSV field format (as JSON objects):
 {
   "age": 34,
