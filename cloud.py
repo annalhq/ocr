@@ -29,27 +29,23 @@ except ImportError:
     print("Please install it by running: pip install supabase")
     exit(1)
 
-# Supabase Configuration
+#  i dont care about exposing my apis, kaam hone pr delete krna hain 
+
 SUPABASE_URL = "https://hprvnejxmmxmegoocvsr.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhwcnZuZWp4bW14bWVnb29jdnNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwNDc1MjUsImV4cCI6MjA2NTYyMzUyNX0.e6qyvvtx_HfkvR8Vt4QJswh8Oa4lZNYQxEyJI89bBE8"  # Replace with your Supabase anon key
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhwcnZuZWp4bW14bWVnb29jdnNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwNDc1MjUsImV4cCI6MjA2NTYyMzUyNX0.e6qyvvtx_HfkvR8Vt4QJswh8Oa4lZNYQxEyJI89bBE8"
 INPUT_BUCKET_NAME = "pdf-inputs"
 OUTPUT_BUCKET_NAME = "ocr-outputs"
 
-# API Configuration
 API_KEYS = [
     "AIzaSyDIoa0ekNCKEprdLyoFpntBI5dEmbqJN8U",
-    "AAGDF",
-    "AAFDF",
-    "AAGDFD"
+    "AIzaSyBXHQxyHB4tu09jC4Y82JESWBrNxouZDoE",
 ]
 
 MODEL_ID = "gemini-2.5-flash-preview-05-20"
 
-# Retry Configuration
-MAX_RETRIES = 2  # Number of retry attempts for failed splits
-RETRY_DELAY = 5  # Delay in seconds between retries
+MAX_RETRIES = 2 
+RETRY_DELAY = 5
 
-# Processing Configuration
 DEFAULT_PAGES_PER_SPLIT = 1
 
 OCR_PROMPT = """
@@ -86,7 +82,6 @@ Output only the Export the extracted data in the following CSV field format (as 
 }
 """
 
-# Global status tracking
 PROCESSING_STATUS = {
     "session_info": {
         "start_time": None,
@@ -108,11 +103,9 @@ PROCESSING_STATUS = {
     "retry_attempts": []
 }
 
-# API Management
 current_api_index = 0
 gemini_clients = []
 
-# Supabase client
 supabase: Optional[Client] = None
 
 def initialize_supabase():
@@ -128,12 +121,10 @@ def initialize_supabase():
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
         print("Successfully initialized Supabase client")
         
-        # Test connection by listing buckets
         try:
             buckets = supabase.storage.list_buckets()
             print(f"Connected to Supabase. Found {len(buckets)} storage buckets.")
             
-            # Check if required buckets exist
             bucket_names = [bucket.name for bucket in buckets]
             
             if INPUT_BUCKET_NAME not in bucket_names:
@@ -143,7 +134,6 @@ def initialize_supabase():
                     print(f"Successfully created bucket '{INPUT_BUCKET_NAME}'.")
                 except Exception as e_create:
                     print(f"ERROR: Could not create bucket '{INPUT_BUCKET_NAME}': {e_create}")
-                    # Optionally, you might want to return False or raise an error here
             else:
                 print(f"Input bucket '{INPUT_BUCKET_NAME}' found.")
             
@@ -154,7 +144,6 @@ def initialize_supabase():
                     print(f"Successfully created bucket '{OUTPUT_BUCKET_NAME}'.")
                 except Exception as e_create:
                     print(f"ERROR: Could not create bucket '{OUTPUT_BUCKET_NAME}': {e_create}")
-                    # Optionally, you might want to return False or raise an error here
             else:
                 print(f"Output bucket '{OUTPUT_BUCKET_NAME}' found.")
             
@@ -191,14 +180,11 @@ def list_input_pdfs() -> List[str]:
 def download_pdf_from_supabase(file_name: str, local_path: pathlib.Path) -> bool:
     """Download a PDF file from Supabase input bucket to local temporary storage."""
     try:
-        # Download file from Supabase
         response = supabase.storage.from_(INPUT_BUCKET_NAME).download(file_name)
         
-        # Write to local file
         with open(local_path, 'wb') as f:
             f.write(response)
         
-        # Update stats
         file_size_mb = len(response) / (1024 * 1024)
         PROCESSING_STATUS["session_info"]["storage_stats"]["files_downloaded"] += 1
         PROCESSING_STATUS["session_info"]["storage_stats"]["total_download_size_mb"] += file_size_mb
@@ -220,14 +206,11 @@ def download_pdf_from_supabase(file_name: str, local_path: pathlib.Path) -> bool
 def upload_file_to_supabase(local_path: pathlib.Path, remote_name: str, bucket_name: str = OUTPUT_BUCKET_NAME) -> bool:
     """Upload a file to Supabase bucket."""
     try:
-        # Read file content
         with open(local_path, 'rb') as f:
             file_content = f.read()
         
-        # Upload to Supabase
         response = supabase.storage.from_(bucket_name).upload(remote_name, file_content)
         
-        # Update stats
         file_size_mb = len(file_content) / (1024 * 1024)
         PROCESSING_STATUS["session_info"]["storage_stats"]["files_uploaded"] += 1
         PROCESSING_STATUS["session_info"]["storage_stats"]["total_upload_size_mb"] += file_size_mb
@@ -250,15 +233,12 @@ def upload_file_to_supabase(local_path: pathlib.Path, remote_name: str, bucket_n
 def upload_status_to_supabase(status_data: dict) -> bool:
     """Upload processing status JSON to Supabase."""
     try:
-        # Convert status to JSON string
         status_json = json.dumps(status_data, indent=2, ensure_ascii=False)
         status_bytes = status_json.encode('utf-8')
         
-        # Generate timestamped filename
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         status_filename = f"processing_status_{timestamp}.json"
         
-        # Upload status file
         response = supabase.storage.from_(OUTPUT_BUCKET_NAME).upload(status_filename, status_bytes)
         
         print(f"  Status JSON uploaded as {status_filename}")
@@ -276,7 +256,7 @@ def initialize_gemini_clients():
     
     for i, api_key in enumerate(API_KEYS):
         try:
-            if not api_key or api_key in ["AAGDF", "AAFDF", "AAGDFD"]:  # Skip placeholder keys
+            if not api_key:
                 print(f"WARNING: API key {i+1} is a placeholder or empty. Skipping.")
                 gemini_clients.append(None)
                 continue
@@ -295,7 +275,6 @@ def initialize_gemini_clients():
                 "timestamp": datetime.now().isoformat()
             })
     
-    # Check if at least one client is available
     valid_clients = [client for client in gemini_clients if client is not None]
     if not valid_clients:
         print("CRITICAL ERROR: No valid Gemini API clients could be initialized.")
@@ -315,7 +294,6 @@ def get_next_available_client() -> Tuple[Optional[genai.Client], int]:
         client = gemini_clients[current_api_index]
         api_index = current_api_index
         
-        # Move to next client for next call
         current_api_index = (current_api_index + 1) % len(gemini_clients)
         
         if client is not None:
@@ -367,9 +345,9 @@ def update_split_status(pdf_name: str, split_name: str, success: bool, error_mes
     if success:
         pdf_status["successful_splits"] += 1
     else:
-        if retry_attempt == MAX_RETRIES:  # Only count as final failure after all retries
+        if retry_attempt == MAX_RETRIES:
             pdf_status["failed_splits"] += 1
-            # Add to global failed splits list
+
             PROCESSING_STATUS["failed_splits"].append({
                 "pdf_name": pdf_name,
                 "split_name": split_name,
@@ -393,7 +371,6 @@ def finalize_pdf_status(pdf_name: str, overall_success: bool, final_error: str =
             "timestamp": datetime.now().isoformat()
         })
     
-    # Update session counters
     if overall_success:
         PROCESSING_STATUS["session_info"]["successful_pdfs"] += 1
     else:
@@ -404,13 +381,11 @@ def split_pdf_in_memory(pdf_content: bytes, pages_per_split: int, pdf_name: str)
     split_pdfs = []
     
     try:
-        # Create PDF reader from bytes
         pdf_stream = io.BytesIO(pdf_content)
         pdf_reader = PdfReader(pdf_stream)
         total_pages = len(pdf_reader.pages)
         base_name = pathlib.Path(pdf_name).stem
         
-        # Calculate total splits and initialize status
         total_splits = (total_pages + pages_per_split - 1) // pages_per_split
         initialize_pdf_status(pdf_name, total_splits)
 
@@ -420,7 +395,6 @@ def split_pdf_in_memory(pdf_content: bytes, pages_per_split: int, pdf_name: str)
             for page_num in range(i, end_page):
                 pdf_writer.add_page(pdf_reader.pages[page_num])
 
-            # Write to bytes
             output_stream = io.BytesIO()
             pdf_writer.write(output_stream)
             split_pdf_bytes = output_stream.getvalue()
@@ -449,10 +423,8 @@ def gemini_ocr_pdf_with_retry(pdf_bytes: bytes, split_name: str, pdf_name: str) 
     try:
         print(f"  Processing OCR for {split_name}...")
 
-        # Try with retry logic
-        for attempt in range(MAX_RETRIES + 1):  # +1 for initial attempt
+        for attempt in range(MAX_RETRIES + 1):
             try:
-                # Get next available client
                 client, api_index = get_next_available_client()
                 
                 if client is None:
@@ -469,13 +441,12 @@ def gemini_ocr_pdf_with_retry(pdf_bytes: bytes, split_name: str, pdf_name: str) 
 
                 print(f"    Attempt {attempt + 1}: Using API {api_index + 1}")
 
-                # Create temporary file for upload
                 with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_file:
                     temp_file.write(pdf_bytes)
                     temp_file_path = temp_file.name
 
                 try:
-                    # Upload the PDF file to Gemini
+
                     file_ref = client.files.upload(file=temp_file_path)
                     
                     response = client.models.generate_content(
@@ -483,12 +454,10 @@ def gemini_ocr_pdf_with_retry(pdf_bytes: bytes, split_name: str, pdf_name: str) 
                         contents=[file_ref, OCR_PROMPT]
                     )
 
-                    # Success - return the OCR result
                     print(f"  OCR completed for {split_name} (API {api_index + 1}, Attempt {attempt + 1})")
                     update_split_status(pdf_name, split_name, True, None, attempt)
                     update_api_stats(api_index, True)
                     
-                    # Log successful retry if this wasn't the first attempt
                     if attempt > 0:
                         PROCESSING_STATUS["retry_attempts"].append({
                             "pdf_name": pdf_name,
@@ -501,7 +470,6 @@ def gemini_ocr_pdf_with_retry(pdf_bytes: bytes, split_name: str, pdf_name: str) 
                     return response.text
 
                 finally:
-                    # Clean up temporary file
                     try:
                         os.unlink(temp_file_path)
                     except:
@@ -516,7 +484,6 @@ def gemini_ocr_pdf_with_retry(pdf_bytes: bytes, split_name: str, pdf_name: str) 
                     print(f"    Retrying in {RETRY_DELAY} seconds...")
                     time.sleep(RETRY_DELAY)
                 else:
-                    # Final failure after all retries
                     final_error = f"Failed after {MAX_RETRIES + 1} attempts. Last error: {error_msg}"
                     update_split_status(pdf_name, split_name, False, final_error, attempt)
                     return None
@@ -534,7 +501,6 @@ def create_zip_from_texts(ocr_results: Dict[str, str], pdf_name: str) -> Optiona
         
         with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for split_name, ocr_text in ocr_results.items():
-                # Create filename for OCR text
                 text_filename = f"{pathlib.Path(split_name).stem}_ocr.txt"
                 zipf.writestr(text_filename, ocr_text.encode('utf-8'))
         
@@ -560,7 +526,6 @@ def process_single_pdf(pdf_name: str, pages_per_split: int) -> bool:
     print(f"\n--- Starting pipeline for: {pdf_name} ---")
     
     try:
-        # Step 1: Download PDF from Supabase
         print("Step 1: Downloading PDF from Supabase...")
         with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_file:
             temp_pdf_path = pathlib.Path(temp_file.name)
@@ -572,11 +537,10 @@ def process_single_pdf(pdf_name: str, pages_per_split: int) -> bool:
             return False
         
         try:
-            # Read PDF content
+
             with open(temp_pdf_path, 'rb') as f:
                 pdf_content = f.read()
             
-            # Step 2: Split the PDF in memory
             print("Step 2: Splitting PDF...")
             split_pdfs = split_pdf_in_memory(pdf_content, pages_per_split, pdf_name)
 
@@ -587,7 +551,6 @@ def process_single_pdf(pdf_name: str, pages_per_split: int) -> bool:
                 return False
             print(f"  Created {len(split_pdfs)} split files")
 
-            # Step 3: Process each split with Gemini OCR (with retry logic)
             print("Step 3: Processing splits with Gemini OCR (with retry logic)...")
             ocr_results = {}
             for i, (split_bytes, split_name) in enumerate(split_pdfs, 1):
@@ -603,18 +566,15 @@ def process_single_pdf(pdf_name: str, pages_per_split: int) -> bool:
                 return False
             print(f"  Successfully generated {len(ocr_results)} OCR text results")
 
-            # Step 4: Create ZIP archive and upload to Supabase
             print("Step 4: Creating ZIP archive and uploading to Supabase...")
             zip_bytes = create_zip_from_texts(ocr_results, pdf_name)
             
             if zip_bytes:
-                # Save ZIP to temporary file and upload
                 with tempfile.NamedTemporaryFile(suffix='.zip', delete=False) as temp_zip:
                     temp_zip.write(zip_bytes)
                     temp_zip_path = pathlib.Path(temp_zip.name)
                 
                 try:
-                    # Upload to Supabase
                     pdf_stem = pathlib.Path(pdf_name).stem
                     output_zip_name = f"{pdf_stem}-output.zip"
                     
@@ -630,7 +590,6 @@ def process_single_pdf(pdf_name: str, pages_per_split: int) -> bool:
                         return False
                         
                 finally:
-                    # Clean up temporary ZIP file
                     try:
                         os.unlink(temp_zip_path)
                     except:
@@ -642,7 +601,6 @@ def process_single_pdf(pdf_name: str, pages_per_split: int) -> bool:
                 return False
 
         finally:
-            # Clean up temporary PDF file
             try:
                 os.unlink(temp_pdf_path)
             except:
@@ -661,16 +619,13 @@ def main():
     print("=== Features: Retry Logic + Backup APIs ===")
     print("=======================================")
     
-    # Initialize session tracking
     PROCESSING_STATUS["session_info"]["start_time"] = datetime.now().isoformat()
     
-    # Initialize Supabase
     print("Initializing Supabase client...")
     if not initialize_supabase():
         print("Failed to initialize Supabase. Exiting.")
         return
     
-    # Initialize Gemini clients
     print("Initializing Gemini API clients...")
     initialize_gemini_clients()
     
@@ -681,7 +636,6 @@ def main():
     print(f"Retry Delay:      {RETRY_DELAY}s")
     print("-" * 50)
 
-    # Get list of PDF files from Supabase
     print("Fetching PDF files from Supabase...")
     pdf_files = list_input_pdfs()
 
@@ -689,7 +643,6 @@ def main():
         print(f"No PDF files found in bucket '{INPUT_BUCKET_NAME}'.")
         print(f"Please upload your PDF files to the '{INPUT_BUCKET_NAME}' bucket in Supabase.")
         PROCESSING_STATUS["session_info"]["total_pdfs"] = 0
-        # Upload status to Supabase
         upload_status_to_supabase(PROCESSING_STATUS)
         return
 
@@ -712,11 +665,9 @@ def main():
         else:
             failed_pipelines += 1
         
-        # Upload status after each PDF (incremental saving)
         upload_status_to_supabase(PROCESSING_STATUS)
         print("-" * 50)
 
-    # Final status upload
     PROCESSING_STATUS["session_info"]["end_time"] = datetime.now().isoformat()
     upload_status_to_supabase(PROCESSING_STATUS)
 
@@ -728,7 +679,6 @@ def main():
     print(f"Failed to process:    {failed_pipelines}")
     print(f"Results saved in bucket: {OUTPUT_BUCKET_NAME}")
     
-    # Storage Statistics
     storage_stats = PROCESSING_STATUS["session_info"]["storage_stats"]
     print(f"\n=== Storage Statistics ===")
     print(f"Files downloaded: {storage_stats['files_downloaded']}")
@@ -737,7 +687,6 @@ def main():
     print(f"Total upload size: {storage_stats['total_upload_size_mb']:.2f} MB")
   
  
-    # API Usage Statistics
     print("\n=== API Usage Statistics ===")
     for api_key, stats in PROCESSING_STATUS["session_info"]["api_usage_stats"].items():
         successful = stats["successful_calls"]
@@ -747,7 +696,6 @@ def main():
             success_rate = (successful / total) * 100
             print(f"{api_key.upper()}: {successful} success, {failed} failed (Success rate: {success_rate:.1f}%)")
     
-    # Retry Statistics
     total_retries = len(PROCESSING_STATUS["retry_attempts"])
     if total_retries > 0:
         print(f"\n=== Retry Statistics ===")
